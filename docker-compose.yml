@@ -6,30 +6,33 @@ services:
     container_name: wordpress_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wpuser
-      MYSQL_PASSWORD: wppass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     networks:
       - webnet
 
   wordpress:
-    image: wordpress:latest
+    image: wordpress:php8.2-apache
     container_name: wordpress_app
     restart: always
     depends_on:
       - db
     ports:
-      - "8000:80"     # WP Admin → http://localhost:8000
+      - "${WORDPRESS_PORT:-8000}:80" # http://localhost:${WORDPRESS_PORT:-8000}
     environment:
       WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_USER: wpuser
-      WORDPRESS_DB_PASSWORD: wppass
-      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
     volumes:
+      # WordPress core in a named volume (portable; not shadowed by empty host dir)
       - wordpress_data:/var/www/html
+      # Your plugins/themes/uploads shipped from repo
+      - ./wp-content:/var/www/html/wp-content
     networks:
       - webnet
 
@@ -40,25 +43,27 @@ services:
     depends_on:
       - db
     ports:
-      - "8080:80"     # phpMyAdmin → http://localhost:8080
+      - "${PHPMYADMIN_PORT:-8080}:80" # http://localhost:${PHPMYADMIN_PORT:-8080}
     environment:
       PMA_HOST: db
-      MYSQL_ROOT_PASSWORD: rootpass
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
     networks:
       - webnet
 
   frontend:
+    # Apache-based static server for the built React app
     build:
       context: ./frontend
       args:
-        # Apollo uses /graphql; Apache vhost proxies this to the wordpress service
-        VITE_WORDPRESS_GRAPHQL_URL: /graphql
+        # Pull the full URL from root .env at build-time
+        VITE_WORDPRESS_GRAPHQL_URL: ${VITE_WORDPRESS_GRAPHQL_URL}
     container_name: vite_frontend_apache
     restart: always
     depends_on:
       - wordpress
     ports:
-      - "5173:80"     # Frontend → http://localhost:5173
+      - "${FRONTEND_PORT:-5173}:80" # http://localhost:${FRONTEND_PORT:-5173}
     networks:
       - webnet
 
