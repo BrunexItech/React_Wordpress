@@ -12,6 +12,11 @@ until wp core is-installed --path=/var/www/html --allow-root; do
   sleep 5
 done
 
+# --- FIX: Ensure plugins are readable by WordPress ---
+echo "Fixing plugin folder permissions..."
+chown -R www-data:www-data /var/www/html/wp-content/plugins
+chmod -R 755 /var/www/html/wp-content/plugins
+
 # Activate all plugins that exist in wp-content/plugins
 echo "Activating all plugins..."
 wp plugin activate --all --path=/var/www/html --allow-root || true

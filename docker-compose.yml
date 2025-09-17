@@ -16,7 +16,10 @@ services:
       - webnet
 
   wordpress:
-    image: wordpress:php8.2-apache
+    build:
+      context: .
+      dockerfile: Dockerfile.wordpress
+    image: wordpress-with-wpcli
     container_name: wordpress_app
     restart: always
     depends_on:
@@ -29,7 +32,7 @@ services:
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
       WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
     volumes:
-      # WordPress core in a named volume (portable; not shadowed by empty host dir)
+      # WordPress core in a named volume
       - wordpress_data:/var/www/html
       # Your plugins/themes/uploads shipped from repo
       - ./wp-content:/var/www/html/wp-content
@@ -55,11 +58,9 @@ services:
       - webnet
 
   frontend:
-    # Apache-based static server for the built React app
     build:
       context: ./frontend
       args:
-        # Pull the full URL from root .env at build-time
         VITE_WORDPRESS_GRAPHQL_URL: ${VITE_WORDPRESS_GRAPHQL_URL}
     container_name: vite_frontend_apache
     restart: always
