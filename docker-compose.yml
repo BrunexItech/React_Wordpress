@@ -31,14 +31,35 @@ services:
       WORDPRESS_DB_USER: ${MYSQL_USER}
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
       WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+
+      # --- first-boot install + site URLs (from .env) ---
+      WP_HOME: ${WP_HOME}
+      WP_SITEURL: ${WP_SITEURL}
+      WP_ADMIN_USER: ${WP_ADMIN_USER}
+      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD}
+      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
+      WP_TITLE: ${WP_TITLE}
+
+      # --- plugins to auto-activate ---
+      WP_PLUGINS: ${WP_PLUGINS}
+
+      # Optional: safer file writes & memory
+      WORDPRESS_CONFIG_EXTRA: |
+        define('FS_METHOD', 'direct');
+        define('WP_MEMORY_LIMIT', '256M');
+
     volumes:
-      # WordPress core in a named volume
+      # WordPress core in a named volume (persists WP install)
       - wordpress_data:/var/www/html
-      # Your plugins/themes/uploads shipped from repo
+
+      # Ship your repo’s wp-content (plugins/themes/uploads)
       - ./wp-content:/var/www/html/wp-content
-      # Mount the custom entrypoint script into the container
+
+      # Bootstrap script
       - ./docker-entrypoint-custom.sh:/usr/local/bin/docker-entrypoint-custom.sh
-    entrypoint: [ "docker-entrypoint-custom.sh" ]
+
+    # Use our bootstrap entrypoint; it will hand off to the original one
+    entrypoint: [ "/usr/local/bin/docker-entrypoint-custom.sh" ]
     networks:
       - webnet
 
