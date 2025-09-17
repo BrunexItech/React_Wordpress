@@ -33,6 +33,9 @@ services:
       - wordpress_data:/var/www/html
       # Your plugins/themes/uploads shipped from repo
       - ./wp-content:/var/www/html/wp-content
+      # Mount the custom entrypoint script into the container
+      - ./docker-entrypoint-custom.sh:/usr/local/bin/docker-entrypoint-custom.sh
+    entrypoint: [ "docker-entrypoint-custom.sh" ]
     networks:
       - webnet
 
