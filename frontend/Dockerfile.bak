@@ -1,0 +1,33 @@
+# --- Build stage: Vite build ---
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Install dependencies (expects package.json in your frontend/)
+COPY package*.json ./
+RUN npm ci
+
+# Copy source
+COPY . .
+
+# Bake same-origin GraphQL path for the container build (can be overridden via build args)
+ARG VITE_WORDPRESS_GRAPHQL_URL=/graphql
+ENV VITE_WORDPRESS_GRAPHQL_URL=$VITE_WORDPRESS_GRAPHQL_URL
+
+# Build the static site
+RUN npm run build
+
+# --- Runtime stage: Apache 2.4 serving static files ---
+FROM httpd:2.4
+
+# Enable required Apache modules in the default config
+RUN sed -i 's/^#LoadModule rewrite_module/LoadModule rewrite_module/' /usr/local/apache2/conf/httpd.conf \
+ && sed -i 's/^#LoadModule headers_module/LoadModule headers_module/' /usr/local/apache2/conf/httpd.conf \
+ && sed -i 's/^#LoadModule proxy_module/LoadModule proxy_module/' /usr/local/apache2/conf/httpd.conf \
+ && sed -i 's/^#LoadModule proxy_http_module/LoadModule proxy_http_module/' /usr/local/apache2/conf/httpd.conf
+
+# Include our vhost
+COPY vite-frontend.conf /usr/local/apache2/conf/extra/vite-frontend.conf
+RUN echo "Include conf/extra/vite-frontend.conf" >> /usr/local/apache2/conf/httpd.conf
+
+# Copy built assets into Apache docroot
+COPY --from=build /app/dist/ /usr/local/apache2/htdocs/
